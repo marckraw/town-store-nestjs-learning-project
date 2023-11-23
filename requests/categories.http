@@ -1,0 +1,50 @@
+GET http://localhost:3000/categories
+
+###
+GET http://localhost:3000/categories/1
+
+###
+GET http://localhost:3000/categories/7
+
+###
+GET http://localhost:3000/categories/73
+
+### Test blednego id ktory jest stringiem
+GET http://localhost:3000/categories/something
+
+### Dodawanie nowej kategorii
+POST http://localhost:3000/categories
+Content-Type: application/json
+
+{
+  "name": "Art"
+}
+
+### Usuwanie kategorii
+DELETE http://localhost:3000/categories/3
+
+### Testowanie poprawności body
+POST http://localhost:3000/categories
+Content-Type: application/json
+
+{}
+
+### Testowanie poprawności body #2 - hack my id!
+POST http://localhost:3000/categories
+Content-Type: application/json
+
+{
+  "id": 2,
+  "name": "Troll!"
+}
+
+### Testowanie poprawności body #3 - hack my fields...
+POST http://localhost:3000/categories
+Content-Type: application/json
+
+{
+  "id": 2,
+  "name": "Troll!",
+  "trollType": "Mountain"
+}
+
