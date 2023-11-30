@@ -20,7 +20,7 @@ RUN pnpm install
 COPY . .
 
 # Make port 8080 available outside the container
-EXPOSE 8080
+EXPOSE 20152
 
 # Start the application
 RUN pnpm build
