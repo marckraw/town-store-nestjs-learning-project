@@ -19,7 +19,7 @@ RUN pnpm install
 # Bundle your app's source code inside the Docker image
 COPY . .
 
-# Make port 8080 available outside the container
+# Make port 20152 available outside the container
 EXPOSE 20152
 
 # Start the application
