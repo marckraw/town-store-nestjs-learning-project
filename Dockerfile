@@ -8,7 +8,6 @@ WORKDIR /app
 
 
 # Copy package.json and package-lock.json to the workdir
-COPY .env.development ./
 COPY package*.json ./
 COPY pnpm-lock.yaml ./
 
