@@ -6,6 +6,8 @@ FROM node:20-alpine
 # Set the working directory in the container to /app
 WORKDIR /app
 
+# Install pnpm
+RUN npm install -g pnpm
 
 # Copy package.json and package-lock.json to the workdir
 COPY package*.json ./
