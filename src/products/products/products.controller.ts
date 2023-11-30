@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -10,15 +11,35 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import * as fsp from 'node:fs/promises';
 import { Product } from './product.interface';
 import { NewProductDto } from './dto/new-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductsService } from './products.service';
+import { ClientLanguage } from '../../middlewares/client-language.decorator';
+import { ApiKeyGuard } from '../../guards/api-key.guard';
+import { SupportedLanguages } from '../../shared/language/language.service';
 
 @Controller('products')
 export class ProductsController {
   constructor(private productsService: ProductsService) {}
+
+  @Get('test-file')
+  async getAllFromFile() {
+    const fileData = await fsp.readFile('not-existing-file.txt');
+    return { fileData };
+  }
+
+  @Get('sample-error')
+  async getSampleError(@ClientLanguage() language: SupportedLanguages) {
+    throw new BadRequestException(
+      language === 'pl'
+        ? 'Błąd z przykładową wiadomością'
+        : 'Error with sample message',
+    );
+  }
   @Get()
   getAll(@Query('name') searchByName: string): readonly Product[] {
     return this.productsService.getAll(searchByName);
@@ -30,13 +51,14 @@ export class ProductsController {
   }
 
   @Post()
+  @UseGuards(ApiKeyGuard)
   addNewProduct(@Body() payload: NewProductDto): Product {
     return this.productsService.createNew(payload);
   }
 
   @Patch(':productId')
   updateProduct(
-    @Param('productId') productId: number,
+    @Param('productId', ParseIntPipe) productId: number,
     @Body() product: UpdateProductDto,
   ) {
     return this.productsService.update(productId, product);
@@ -44,7 +66,7 @@ export class ProductsController {
 
   @Delete(':productId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('productId') productId: number): void {
+  remove(@Param('productId', ParseIntPipe) productId: number): void {
     return this.productsService.removeById(productId);
   }
 }
