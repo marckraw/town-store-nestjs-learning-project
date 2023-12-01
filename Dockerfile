@@ -31,4 +31,6 @@ RUN pnpm db:seed
 # Start the application
 RUN pnpm build
 
+COPY . .
+
 CMD [ "pnpm", "start:prod" ]
