@@ -22,6 +22,12 @@ COPY . .
 # Make port 20152 available outside the container
 EXPOSE 20152
 
+# Run migrations
+RUN pnpm db:migrate
+
+# Run seeders - this of course will be removed when the time come to go to production
+RUN pnpm db:seed
+
 # Start the application
 RUN pnpm build
 
