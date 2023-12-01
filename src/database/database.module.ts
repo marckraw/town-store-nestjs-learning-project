@@ -1,6 +1,6 @@
 import { Global, Logger, Module } from '@nestjs/common';
 import knex from 'knex';
-import knexConfig from '../knexfile';
+import knexConfig from '../../knexfile';
 
 const logger = new Logger('DBConnection');
 
