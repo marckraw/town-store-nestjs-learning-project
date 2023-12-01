@@ -1,41 +1,60 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { Category } from './Category.interface';
-import { categoriesList } from './categories-list';
 import { NewCategoryDto } from './dto/new-category.dto';
+import type { Knex } from 'knex';
 
 @Injectable()
 export class CategoriesService {
-  private categories: Category[] = categoriesList;
+  private logger = new Logger(CategoriesService.name);
 
-  private generateNextId(): number {
-    return Math.max(...this.categories.map((c) => c.id)) + 1;
-  }
+  constructor(@Inject('DBConnection') private readonly knex: Knex) {}
 
-  private find(id: number): Category {
-    const category = this.categories.find((c) => c.id === id);
+  private async find(id: number): Promise<Category> {
+    const category = await this.knex<Category>('categories')
+      .where({ id })
+      .first();
     if (!category) {
       throw new NotFoundException(`category with id: ${id} not found`);
     }
     return category;
   }
 
-  getAll(): Category[] {
-    return this.categories;
+  async getAll(): Promise<Category[]> {
+    return this.knex<Category>('categories');
   }
 
-  addNew(categoryDto: NewCategoryDto): Category {
-    const category: Category = { id: this.generateNextId(), ...categoryDto };
-    this.categories.push(category);
-    return category;
+  async addNew(categoryDto: NewCategoryDto): Promise<Category> {
+    try {
+      const [newOne] = await this.knex<Category>('categories').insert({
+        ...categoryDto,
+      });
+      return this.getOneById(newOne);
+    } catch (error) {
+      if (error?.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        throw new BadRequestException(
+          `Category named "${categoryDto.name}" already exist`,
+        );
+      }
+      throw error;
+    }
   }
 
-  getOneById(id: number): Category {
+  getOneById(id: number): Promise<Category> {
     return this.find(id);
   }
 
-  removeById(id: number): { id: number; removed: boolean } {
-    this.find(id);
-    this.categories = this.categories.filter((c) => c.id !== id);
-    return { id, removed: true };
+  async removeById(id: number): Promise<{ id: number; removed: number }> {
+    await this.getOneById(id);
+    const removed = await this.knex<Category>('categories')
+      .where({ id })
+      .delete();
+    this.logger.log(`Removed category with id: ${id}`);
+    return { id, removed };
   }
 }
