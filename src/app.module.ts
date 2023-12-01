@@ -9,6 +9,7 @@ import { ProductModule } from './products/product.module';
 import { ExpenseModule } from './expense/expense.module';
 import { OrdersModule } from './orders/orders.module';
 import { SharedModule } from './shared/shared.module';
+import { DatabaseModule } from './database/database.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { SharedModule } from './shared/shared.module';
     ExpenseModule,
     OrdersModule,
     SharedModule,
+    DatabaseModule,
   ],
   controllers: [],
   providers: [

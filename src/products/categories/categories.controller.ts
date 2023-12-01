@@ -16,12 +16,14 @@ export class CategoriesController {
   constructor(private categoriesService: CategoriesService) {}
 
   @Get()
-  getAll(): readonly Category[] {
+  getAll(): Promise<readonly Category[]> {
     return this.categoriesService.getAll();
   }
 
   @Get(':id')
-  getSingleCategory(@Param('id', ParseIntPipe) categoryId: number): Category {
+  getSingleCategory(
+    @Param('id', ParseIntPipe) categoryId: number,
+  ): Promise<Category> {
     return this.categoriesService.getOneById(categoryId);
   }
   @Post()

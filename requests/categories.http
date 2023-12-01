@@ -1,19 +1,19 @@
-GET http://localhost:3000/categories
+GET http://localhost:20152/categories
 
 ###
-GET http://localhost:3000/categories/1
+GET http://localhost:20152/categories/1
 
 ###
-GET http://localhost:3000/categories/7
+GET http://localhost:20152/categories/7
 
 ###
-GET http://localhost:3000/categories/73
+GET http://localhost:20152/categories/73
 
 ### Test blednego id ktory jest stringiem
-GET http://localhost:3000/categories/something
+GET http://localhost:20152/categories/something
 
 ### Dodawanie nowej kategorii
-POST http://localhost:3000/categories
+POST http://localhost:20152/categories
 Content-Type: application/json
 
 {
@@ -21,16 +21,16 @@ Content-Type: application/json
 }
 
 ### Usuwanie kategorii
-DELETE http://localhost:3000/categories/3
+DELETE http://localhost:20152/categories/3
 
 ### Testowanie poprawności body
-POST http://localhost:3000/categories
+POST http://localhost:20152/categories
 Content-Type: application/json
 
 {}
 
 ### Testowanie poprawności body #2 - hack my id!
-POST http://localhost:3000/categories
+POST http://localhost:20152/categories
 Content-Type: application/json
 
 {
@@ -39,7 +39,7 @@ Content-Type: application/json
 }
 
 ### Testowanie poprawności body #3 - hack my fields...
-POST http://localhost:3000/categories
+POST http://localhost:20152/categories
 Content-Type: application/json
 
 {
