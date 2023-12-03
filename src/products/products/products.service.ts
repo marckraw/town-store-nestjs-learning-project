@@ -1,71 +1,89 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { Product } from './product.interface';
-import { productList } from './product-list';
 import { NewProductDto } from './dto/new-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CategoriesService } from '../categories/categories.service';
+import { Knex } from 'knex';
 
 @Injectable()
 export class ProductsService {
-  private products: Product[] = productList;
   private logger = new Logger(ProductsService.name);
 
-  constructor(private categoriesService: CategoriesService) {}
+  constructor(
+    @Inject('DBConnection') private readonly knex: Knex,
+    private categoriesService: CategoriesService,
+  ) {}
 
-  private generateNextId(): number {
-    return Math.max(...this.products.map((c) => c.id)) + 1;
-  }
-
-  findProduct(productId: number): Product {
-    const product = this.products.find((product) => product.id === productId);
+  private async _find(productId: number): Promise<Product> {
+    const product = await this.knex<Product>('products')
+      .where({ id: productId })
+      .first();
     if (!product) {
       throw new NotFoundException(`Product with id: ${productId} not found`);
     }
     return product;
   }
 
-  createNew(product: NewProductDto): Product {
-    this.categoriesService.getOneById(product.categoryId);
+  public async createNew(productDto: NewProductDto): Promise<Product> {
+    this.categoriesService.getOneById(productDto.categoryId);
 
-    const newProduct: Product = {
-      id: this.generateNextId(),
-      stock: 0,
-      ...product,
-    };
+    try {
+      const [newOne] = await this.knex<Product>('products').insert({
+        ...productDto,
+      });
 
-    this.logger.log('About to add');
-    this.logger.log(newProduct);
+      return this.getOneById(newOne);
+    } catch (error) {
+      if (error?.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        throw new BadRequestException(
+          `Product named "${productDto.name}" already exist`,
+        );
+      }
 
-    this.logger.log(`Created product with id: ${newProduct.id}`);
-
-    this.products.push(newProduct);
-    return newProduct;
+      throw error;
+    }
   }
 
-  getAll(name: string = ''): Product[] {
-    return this.products.filter((p) =>
+  public async getAll(name: string = ''): Promise<Product[]> {
+    const allProduct = await this.knex<Product>('products');
+
+    return allProduct.filter((p) =>
       p.name.toLowerCase().includes(name.toLowerCase()),
     );
   }
 
-  getOneById(id: number) {
+  public getOneById(id: number): Promise<Product> {
     this.logger.verbose(`Read product id: ${id}`);
     this.logger.debug(`Read product id: ${id}`);
     this.logger.log(`Read product id: ${id}`);
     this.logger.warn(`Read product id: ${id}`);
     this.logger.error(`Read product id: ${id}`);
     this.logger.fatal(`Read product id: ${id}`);
-    return this.findProduct(id);
+
+    return this._find(id);
   }
 
-  update(id: number, partialProduct: UpdateProductDto) {
-    const productToUpdate = this.findProduct(id);
+  // TODO: rewrite update to work with database
+  public update(id: number, partialProduct: UpdateProductDto) {
+    const productToUpdate = this._find(id);
     Object.assign(productToUpdate, partialProduct);
     return productToUpdate;
   }
 
-  removeById(id: number): void {
-    this.findProduct(id);
-    this.products = this.products.filter((p) => p.id !== id);
+  public async removeById(
+    id: number,
+  ): Promise<{ id: number; removed: number }> {
+    this._find(id);
+
+    const removed = await this.knex<Product>('products').where({ id }).delete();
+    this.logger.log(`Removed product with id: ${id}`);
+
+    return { id, removed };
   }
 }

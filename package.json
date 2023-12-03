@@ -28,7 +28,8 @@
     "docker:db:logs": "docker-compose logs -f",
     "################################################## DATABASE ################################################": "#",
     "db:migrate": "knex migrate:latest --knexfile knexfile.ts",
-    "db:seed": "knex seed:run --knexfile knexfile.ts"
+    "db:seed": "knex seed:run --knexfile knexfile.ts",
+    "db:rollback": "knex migrate:rollback --knexfile knexfile.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

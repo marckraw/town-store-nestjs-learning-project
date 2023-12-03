@@ -1,28 +1,32 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   MonthlyExpense,
   MonthlyExpensesWithMetadata,
 } from './monthly-expenses.interface';
-import { monthlyExpenses, monthlyIncomes } from './monthly-expenses';
+import { monthlyIncomes } from './monthly-expenses';
 import { NewMonthlyExpenseDto } from './dto/new-monthly-expense.dto';
 import { UpdateMonthlyExpenseDto } from './dto/update-monthly-expense.dto';
 import { monthlyBudgetCategories } from './monthly-budget';
+import { Knex } from 'knex';
 
 @Injectable()
 export class MonthlyExpensesService {
-  private monthlyExpenses: MonthlyExpense[] = monthlyExpenses;
   private logger = new Logger(MonthlyExpensesService.name);
 
-  constructor() {}
+  constructor(@Inject('DBConnection') private readonly knex: Knex) {}
+  private async _findMonthlyExpense(
+    monthlyExpenseId: number,
+  ): Promise<MonthlyExpense> {
+    const monthlyExpense = await this.knex<MonthlyExpense>('monthly_expenses')
+      .where({ id: monthlyExpenseId })
+      .first();
 
-  private generateNextId(): number {
-    return Math.max(...this.monthlyExpenses.map((c) => c.id)) + 1;
-  }
-
-  findMonthlyExpense(monthlyExpenseId: number): MonthlyExpense {
-    const monthlyExpense = this.monthlyExpenses.find(
-      (monthlyExpense) => monthlyExpense.id === monthlyExpenseId,
-    );
     if (!monthlyExpense) {
       throw new NotFoundException(
         `MonthlyExpense with id: ${monthlyExpenseId} not found`,
@@ -31,24 +35,37 @@ export class MonthlyExpensesService {
     return monthlyExpense;
   }
 
-  createNew(monthlyExpense: NewMonthlyExpenseDto): MonthlyExpense {
-    const newMonthlyExpense: MonthlyExpense = {
-      id: this.generateNextId(),
-      ...monthlyExpense,
-    };
+  public async createNew(
+    monthlyExpenseDto: NewMonthlyExpenseDto,
+  ): Promise<MonthlyExpense> {
+    try {
+      const [newOne] = await this.knex<MonthlyExpense>(
+        'monthly_expenses',
+      ).insert({
+        ...monthlyExpenseDto,
+      });
 
-    this.logger.log('About to add');
-    this.logger.log(newMonthlyExpense);
+      const newMonthlyExpense = await this._findMonthlyExpense(newOne);
 
-    this.logger.log(`Created monthlyExpense with id: ${newMonthlyExpense.id}`);
+      this.logger.log(
+        `Created monthlyExpense with id: ${newMonthlyExpense.id}`,
+      );
 
-    this.monthlyExpenses.push(newMonthlyExpense);
-    return newMonthlyExpense;
+      return newMonthlyExpense;
+    } catch (error) {
+      if (error?.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        throw new BadRequestException(
+          `MonthlyExpense named "${monthlyExpenseDto.name}" already exist`,
+        );
+      }
+
+      throw error;
+    }
   }
 
-  getAll(name: string = ''): MonthlyExpensesWithMetadata {
-    const all = this.monthlyExpenses.filter((me) =>
-      me.name.toLowerCase().includes(name.toLowerCase()),
+  public async getAll(name: string = ''): Promise<MonthlyExpensesWithMetadata> {
+    const all = (await this.knex<MonthlyExpense>('monthly_expenses')).filter(
+      (me) => me.name.toLowerCase().includes(name.toLowerCase()),
     );
 
     const chf_monthly = all.reduce((acc, next) => {
@@ -97,24 +114,33 @@ export class MonthlyExpensesService {
     };
   }
 
-  getOneById(id: number) {
+  public async getOneById(id: number): Promise<MonthlyExpense> {
     this.logger.verbose(`Read monthlyExpense id: ${id}`);
     this.logger.debug(`Read monthlyExpense id: ${id}`);
     this.logger.log(`Read monthlyExpense id: ${id}`);
     this.logger.warn(`Read monthlyExpense id: ${id}`);
     this.logger.error(`Read monthlyExpense id: ${id}`);
     this.logger.fatal(`Read monthlyExpense id: ${id}`);
-    return this.findMonthlyExpense(id);
+
+    return this._findMonthlyExpense(id);
   }
 
+  // TODO: rewrite update to work with database
   update(id: number, partialMonthlyExpense: UpdateMonthlyExpenseDto) {
-    const monthlyExpenseToUpdate = this.findMonthlyExpense(id);
+    const monthlyExpenseToUpdate = this._findMonthlyExpense(id);
     Object.assign(monthlyExpenseToUpdate, partialMonthlyExpense);
     return monthlyExpenseToUpdate;
   }
 
-  removeById(id: number): void {
-    this.findMonthlyExpense(id);
-    this.monthlyExpenses = this.monthlyExpenses.filter((p) => p.id !== id);
+  public async removeById(
+    id: number,
+  ): Promise<{ id: number; removed: number }> {
+    this._findMonthlyExpense(id);
+
+    const removed = await this.knex<MonthlyExpense>('monthly_expenses')
+      .where({ id })
+      .delete();
+
+    return { id, removed };
   }
 }

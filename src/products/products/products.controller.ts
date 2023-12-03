@@ -41,18 +41,20 @@ export class ProductsController {
     );
   }
   @Get()
-  getAll(@Query('name') searchByName: string): readonly Product[] {
+  getAll(@Query('name') searchByName: string): Promise<readonly Product[]> {
     return this.productsService.getAll(searchByName);
   }
 
   @Get(':productId')
-  getOne(@Param('productId', ParseIntPipe) productId: number): Product {
+  getOne(
+    @Param('productId', ParseIntPipe) productId: number,
+  ): Promise<Product> {
     return this.productsService.getOneById(productId);
   }
 
   @Post()
   @UseGuards(ApiKeyGuard)
-  addNewProduct(@Body() payload: NewProductDto): Product {
+  addNewProduct(@Body() payload: NewProductDto): Promise<Product> {
     return this.productsService.createNew(payload);
   }
 
@@ -66,7 +68,9 @@ export class ProductsController {
 
   @Delete(':productId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('productId', ParseIntPipe) productId: number): void {
+  remove(
+    @Param('productId', ParseIntPipe) productId: number,
+  ): Promise<{ id: number; removed: number }> {
     return this.productsService.removeById(productId);
   }
 }
