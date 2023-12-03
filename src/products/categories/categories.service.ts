@@ -49,6 +49,13 @@ export class CategoriesService {
     return this.find(id);
   }
 
+  // TODO: rewrite update to work with database
+  public update(id: number, partialCategory: any): Promise<Category> {
+    const categoryToUpdate = this.find(id);
+    Object.assign(categoryToUpdate, partialCategory);
+    return categoryToUpdate;
+  }
+
   async removeById(id: number): Promise<{ id: number; removed: number }> {
     await this.getOneById(id);
     const removed = await this.knex<Category>('categories')

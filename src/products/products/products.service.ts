@@ -69,6 +69,7 @@ export class ProductsService {
     return this._find(id);
   }
 
+  // TODO: rewrite update to work with database
   public update(id: number, partialProduct: UpdateProductDto) {
     const productToUpdate = this._find(id);
     Object.assign(productToUpdate, partialProduct);

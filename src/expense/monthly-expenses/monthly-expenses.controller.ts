@@ -23,19 +23,23 @@ import { MonthlyExpensesService } from './monthly-expenses.service';
 export class MonthlyExpensesController {
   constructor(private monthlyExpensesService: MonthlyExpensesService) {}
   @Get()
-  getAll(@Query('name') searchByName: string): MonthlyExpensesWithMetadata {
+  getAll(
+    @Query('name') searchByName: string,
+  ): Promise<MonthlyExpensesWithMetadata> {
     return this.monthlyExpensesService.getAll(searchByName);
   }
 
   @Get(':monthlyExpenseId')
   getOne(
     @Param('monthlyExpenseId', ParseIntPipe) monthlyExpenseId: number,
-  ): MonthlyExpense {
+  ): Promise<MonthlyExpense> {
     return this.monthlyExpensesService.getOneById(monthlyExpenseId);
   }
 
   @Post()
-  addNewMonthlyExpense(@Body() payload: NewMonthlyExpenseDto): MonthlyExpense {
+  addNewMonthlyExpense(
+    @Body() payload: NewMonthlyExpenseDto,
+  ): Promise<MonthlyExpense> {
     return this.monthlyExpensesService.createNew(payload);
   }
 
@@ -49,7 +53,9 @@ export class MonthlyExpensesController {
 
   @Delete(':monthlyExpenseId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('monthlyExpenseId') monthlyExpenseId: number): void {
+  remove(
+    @Param('monthlyExpenseId') monthlyExpenseId: number,
+  ): Promise<{ id: number; removed: number }> {
     return this.monthlyExpensesService.removeById(monthlyExpenseId);
   }
 }

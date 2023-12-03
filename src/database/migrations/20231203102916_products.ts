@@ -10,7 +10,7 @@ export async function up(knex: Knex): Promise<void> {
     table.string('img_url').defaultTo('https://via.placeholder.com/150');
     table.string('description');
 
-    table.integer('category_id').unsigned().notNullable();
+    table.integer('category_id').unsigned();
     table
       .foreign('category_id')
       .references('id')
