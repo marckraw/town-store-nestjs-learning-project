@@ -14,13 +14,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import * as fsp from 'node:fs/promises';
-import { Product } from './product.interface';
 import { NewProductDto } from './dto/new-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductsService } from './products.service';
 import { ClientLanguage } from '../../middlewares/client-language.decorator';
 import { ApiKeyGuard } from '../../guards/api-key.guard';
 import { SupportedLanguages } from '../../shared/language/language.service';
+import { ProductModel } from './product.model';
 
 @Controller('products')
 export class ProductsController {
@@ -41,20 +41,22 @@ export class ProductsController {
     );
   }
   @Get()
-  getAll(@Query('name') searchByName: string): Promise<readonly Product[]> {
+  getAll(
+    @Query('name') searchByName: string,
+  ): Promise<readonly ProductModel[]> {
     return this.productsService.getAll(searchByName);
   }
 
   @Get(':productId')
   getOne(
     @Param('productId', ParseIntPipe) productId: number,
-  ): Promise<Product> {
+  ): Promise<ProductModel> {
     return this.productsService.getOneById(productId);
   }
 
   @Post()
   @UseGuards(ApiKeyGuard)
-  addNewProduct(@Body() payload: NewProductDto): Promise<Product> {
+  addNewProduct(@Body() payload: NewProductDto): Promise<ProductModel> {
     return this.productsService.createNew(payload);
   }
 
@@ -68,9 +70,7 @@ export class ProductsController {
 
   @Delete(':productId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(
-    @Param('productId', ParseIntPipe) productId: number,
-  ): Promise<{ id: number; removed: number }> {
+  remove(@Param('productId', ParseIntPipe) productId: number): Promise<number> {
     return this.productsService.removeById(productId);
   }
 }

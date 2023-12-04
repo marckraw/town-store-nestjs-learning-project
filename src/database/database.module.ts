@@ -1,6 +1,7 @@
 import { Global, Logger, Module } from '@nestjs/common';
 import knex from 'knex';
 import knexConfig from '../../knexfile';
+import { Model } from 'objection';
 
 const logger = new Logger('DBConnection');
 
@@ -10,6 +11,8 @@ const knexProvider = {
     const connection = knex(knexConfig['development']);
     logger.log('Knex connected');
     logger.debug(knexConfig['development']);
+
+    Model.knex(connection);
 
     return connection;
   },
