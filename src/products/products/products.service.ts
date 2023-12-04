@@ -3,62 +3,57 @@ import {
   Inject,
   Injectable,
   Logger,
-  NotFoundException,
 } from '@nestjs/common';
-import { Product } from './product.interface';
 import { NewProductDto } from './dto/new-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CategoriesService } from '../categories/categories.service';
-import { Knex } from 'knex';
+import { ModelClass } from 'objection';
+import { ProductModel } from './product.model';
 
 @Injectable()
 export class ProductsService {
   private logger = new Logger(ProductsService.name);
 
   constructor(
-    @Inject('DBConnection') private readonly knex: Knex,
+    @Inject('ProductModel')
+    private readonly productModel: ModelClass<ProductModel>,
     private categoriesService: CategoriesService,
   ) {}
 
-  private async _find(productId: number): Promise<Product> {
-    const product = await this.knex<Product>('products')
-      .where({ id: productId })
-      .first();
-    if (!product) {
-      throw new NotFoundException(`Product with id: ${productId} not found`);
-    }
-    return product;
+  private async _find(productId: number): Promise<ProductModel> {
+    return this.productModel
+      .query()
+      .findById(productId)
+      .withGraphFetched('category')
+      .throwIfNotFound(`Product with id: ${productId} not found`);
   }
 
-  public async createNew(productDto: NewProductDto): Promise<Product> {
+  public async createNew(productDto: NewProductDto): Promise<ProductModel> {
     this.categoriesService.getOneById(productDto.categoryId);
 
-    try {
-      const [newOne] = await this.knex<Product>('products').insert({
-        ...productDto,
-      });
+    const newProduct = await this.productModel.query().insert({
+      stock: 0,
+      ...productDto,
+    });
 
-      return this.getOneById(newOne);
-    } catch (error) {
-      if (error?.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-        throw new BadRequestException(
-          `Product named "${productDto.name}" already exist`,
-        );
-      }
+    this.logger.log(`Created new product with id: ${newProduct.id}`);
 
-      throw error;
+    return newProduct;
+  }
+
+  public async getAll(name: string = ''): Promise<ProductModel[]> {
+    return this.productModel.query().whereLike('name', `%${name}%`);
+  }
+
+  async checkProductOnStock(id: number, quantity: number) {
+    const product = await this._find(id);
+    if (product.stock < quantity) {
+      throw new BadRequestException(`Product :${id} is out of stock.`);
     }
+    return true;
   }
 
-  public async getAll(name: string = ''): Promise<Product[]> {
-    const allProduct = await this.knex<Product>('products');
-
-    return allProduct.filter((p) =>
-      p.name.toLowerCase().includes(name.toLowerCase()),
-    );
-  }
-
-  public getOneById(id: number): Promise<Product> {
+  public getOneById(id: number): Promise<ProductModel> {
     this.logger.verbose(`Read product id: ${id}`);
     this.logger.debug(`Read product id: ${id}`);
     this.logger.log(`Read product id: ${id}`);
@@ -69,21 +64,19 @@ export class ProductsService {
     return this._find(id);
   }
 
-  // TODO: rewrite update to work with database
-  public update(id: number, partialProduct: UpdateProductDto) {
-    const productToUpdate = this._find(id);
-    Object.assign(productToUpdate, partialProduct);
-    return productToUpdate;
+  async update(id: number, partialProduct: UpdateProductDto) {
+    // rozwiązane zadanie 6.9
+    if (partialProduct.categoryId) {
+      await this.categoriesService.getOneById(partialProduct.categoryId);
+    }
+    const product = await this.productModel.query().findById(id);
+
+    return product.$query().updateAndFetch(partialProduct);
   }
 
-  public async removeById(
-    id: number,
-  ): Promise<{ id: number; removed: number }> {
+  public async removeById(id: number): Promise<number> {
     this._find(id);
 
-    const removed = await this.knex<Product>('products').where({ id }).delete();
-    this.logger.log(`Removed product with id: ${id}`);
-
-    return { id, removed };
+    return this.productModel.query().deleteById(id);
   }
 }

@@ -19,7 +19,7 @@ export class NewMonthlyExpenseDto {
   amount: number;
 
   @IsNumber({ maxDecimalPlaces: 2 })
-  amount_chf: number;
+  amountChf: number;
 
   @IsString()
   @IsNotEmpty()
@@ -31,5 +31,5 @@ export class NewMonthlyExpenseDto {
 
   @IsNumber({ maxDecimalPlaces: 2 })
   @IsOptional()
-  my_part?: number;
+  myPart?: number;
 }

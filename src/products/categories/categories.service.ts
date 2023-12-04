@@ -3,39 +3,39 @@ import {
   Inject,
   Injectable,
   Logger,
-  NotFoundException,
 } from '@nestjs/common';
-import { Category } from './Category.interface';
 import { NewCategoryDto } from './dto/new-category.dto';
-import type { Knex } from 'knex';
+import { ModelClass } from 'objection';
+import { ProductModel } from '../products/product.model';
+import { CategoryModel } from './category.model';
 
 @Injectable()
 export class CategoriesService {
   private logger = new Logger(CategoriesService.name);
 
-  constructor(@Inject('DBConnection') private readonly knex: Knex) {}
+  constructor(
+    @Inject('CategoryModel')
+    private readonly categoryModel: ModelClass<ProductModel>,
+  ) {}
 
-  private async find(id: number): Promise<Category> {
-    const category = await this.knex<Category>('categories')
-      .where({ id })
-      .first();
-    if (!category) {
-      throw new NotFoundException(`category with id: ${id} not found`);
-    }
-    return category;
+  private async _find(id: number): Promise<CategoryModel> {
+    return this.categoryModel
+      .query()
+      .findById(id)
+      .throwIfNotFound(`Category with id: ${id} not found`);
   }
 
-  async getAll(): Promise<Category[]> {
-    return this.knex<Category>('categories');
+  async getAll(): Promise<readonly CategoryModel[]> {
+    return this.categoryModel.query();
   }
 
-  async addNew(categoryDto: NewCategoryDto): Promise<Category> {
+  async createNew(categoryDto: NewCategoryDto): Promise<CategoryModel> {
     try {
-      const [newOne] = await this.knex<Category>('categories').insert({
+      return await this.categoryModel.query().insert({
         ...categoryDto,
       });
-      return this.getOneById(newOne);
     } catch (error) {
+      this.logger.log(error.constructor.name);
       if (error?.code === 'SQLITE_CONSTRAINT_UNIQUE') {
         throw new BadRequestException(
           `Category named "${categoryDto.name}" already exist`,
@@ -45,23 +45,23 @@ export class CategoriesService {
     }
   }
 
-  getOneById(id: number): Promise<Category> {
-    return this.find(id);
+  getOneById(id: number): Promise<CategoryModel> {
+    return this._find(id);
   }
 
   // TODO: rewrite update to work with database
-  public update(id: number, partialCategory: any): Promise<Category> {
-    const categoryToUpdate = this.find(id);
-    Object.assign(categoryToUpdate, partialCategory);
-    return categoryToUpdate;
+  public async update(
+    id: number,
+    partialCategory: any,
+  ): Promise<CategoryModel> {
+    const category = await this.categoryModel.query().findById(id);
+
+    return category.$query().updateAndFetch(partialCategory);
   }
 
-  async removeById(id: number): Promise<{ id: number; removed: number }> {
+  async removeById(id: number): Promise<number> {
     await this.getOneById(id);
-    const removed = await this.knex<Category>('categories')
-      .where({ id })
-      .delete();
-    this.logger.log(`Removed category with id: ${id}`);
-    return { id, removed };
+
+    return this.categoryModel.query().deleteById(id);
   }
 }
